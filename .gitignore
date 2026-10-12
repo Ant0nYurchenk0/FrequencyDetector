@@ -1,0 +1,18 @@
+# secrets
+.env
+*.pem
+*.tfvars
+!*.tfvars.example
+
+# terraform
+.terraform/
+*.tfstate
+*.tfstate.*
+crash.log
+
+# python
+__pycache__/
+.venv/
+
+# serving: model files are downloaded from Databricks, not committed
+serving/model/

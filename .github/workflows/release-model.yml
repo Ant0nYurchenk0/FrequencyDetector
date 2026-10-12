@@ -1,0 +1,37 @@
+# Deploys a newly promoted champion model to Kubernetes.
+#
+# Triggered by:
+#   - repository_dispatch "model-promoted": the POST the Databricks train job sends
+#     (databricks/jobs/notify_release.py) with client_payload.version
+#   - workflow_dispatch: the "Run workflow" button in the Actions tab, for manual releases
+#
+# Runs on a self-hosted runner on the PC that hosts the Kubernetes cluster, because GitHub's own
+# runners cannot reach a cluster on localhost.
+name: Release model
+
+on:
+  repository_dispatch:
+    types: [model-promoted]
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Model version to deploy (must be the current champion)
+        required: true
+
+# One release at a time; a second promotion waits instead of racing the first.
+concurrency:
+  group: release-model
+  cancel-in-progress: false
+
+jobs:
+  release:
+    runs-on: [self-hosted, frequency-detector]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Deploy and verify
+        shell: powershell
+        env:
+          # Passed via env (not inlined) so the payload cannot inject commands into the script.
+          VERSION: ${{ github.event.client_payload.version || inputs.version }}
+        run: ./scripts/release_model.ps1 -Version $env:VERSION

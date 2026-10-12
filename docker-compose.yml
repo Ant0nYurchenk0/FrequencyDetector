@@ -1,0 +1,24 @@
+# Runs the detector and a Kafka web UI locally; both talk to the Kafka broker on GCP.
+# Connection settings come from .env (see .env.example). Start with: docker compose up --build
+services:
+  detector:
+    build: ./simulator
+    restart: unless-stopped
+    environment:
+      KAFKA_BOOTSTRAP: ${KAFKA_BOOTSTRAP:?set KAFKA_BOOTSTRAP in .env}
+      KAFKA_USERNAME: ${KAFKA_USERNAME:?set KAFKA_USERNAME in .env}
+      KAFKA_PASSWORD: ${KAFKA_PASSWORD:?set KAFKA_PASSWORD in .env}
+
+  # Ingestion into Delta runs on Databricks (see databricks/), not locally.
+
+  kafka-ui:
+    image: provectuslabs/kafka-ui:v0.7.2
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    environment:
+      KAFKA_CLUSTERS_0_NAME: gcp
+      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: ${KAFKA_BOOTSTRAP}
+      KAFKA_CLUSTERS_0_PROPERTIES_SECURITY_PROTOCOL: SASL_PLAINTEXT
+      KAFKA_CLUSTERS_0_PROPERTIES_SASL_MECHANISM: PLAIN
+      KAFKA_CLUSTERS_0_PROPERTIES_SASL_JAAS_CONFIG: "org.apache.kafka.common.security.plain.PlainLoginModule required username=\"${KAFKA_USERNAME}\" password=\"${KAFKA_PASSWORD}\";"

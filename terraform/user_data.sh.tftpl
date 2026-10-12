@@ -1,0 +1,33 @@
+#!/bin/bash
+# Runs once at first boot: installs Docker and starts a single-node Kafka (KRaft).
+set -euxo pipefail
+
+apt-get update
+apt-get install -y docker.io
+systemctl enable --now docker
+
+# BROKER and CONTROLLER listeners are local-only (plaintext, never exposed).
+# EXTERNAL (port 9094) is the one clients use; it requires SASL username/password.
+cat > /etc/kafka.env <<'EOF'
+KAFKA_NODE_ID=1
+KAFKA_PROCESS_ROLES=broker,controller
+KAFKA_LISTENERS=BROKER://127.0.0.1:9092,CONTROLLER://127.0.0.1:9093,EXTERNAL://0.0.0.0:9094
+KAFKA_ADVERTISED_LISTENERS=BROKER://127.0.0.1:9092,EXTERNAL://${public_ip}:9094
+KAFKA_LISTENER_SECURITY_PROTOCOL_MAP=BROKER:PLAINTEXT,CONTROLLER:PLAINTEXT,EXTERNAL:SASL_PLAINTEXT
+KAFKA_INTER_BROKER_LISTENER_NAME=BROKER
+KAFKA_CONTROLLER_LISTENER_NAMES=CONTROLLER
+KAFKA_CONTROLLER_QUORUM_VOTERS=1@127.0.0.1:9093
+KAFKA_SASL_ENABLED_MECHANISMS=PLAIN
+KAFKA_LISTENER_NAME_EXTERNAL_PLAIN_SASL_JAAS_CONFIG=org.apache.kafka.common.security.plain.PlainLoginModule required user_${username}="${password}";
+KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR=1
+KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR=1
+KAFKA_TRANSACTION_STATE_LOG_MIN_ISR=1
+KAFKA_AUTO_CREATE_TOPICS_ENABLE=true
+KAFKA_LOG_RETENTION_HOURS=168
+EOF
+chmod 600 /etc/kafka.env
+
+# Host networking keeps the port setup trivial; data lives in a named volume.
+docker rm -f kafka || true
+docker run -d --name kafka --restart unless-stopped --network host \
+  --env-file /etc/kafka.env -v kafka-data:/var/lib/kafka/data apache/kafka:3.8.0

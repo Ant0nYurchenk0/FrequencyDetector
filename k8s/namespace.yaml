@@ -1,0 +1,6 @@
+# A namespace is a named "folder" inside the cluster. Everything for this project lives in it,
+# so `kubectl delete namespace frequency-detector` removes all of it at once.
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: frequency-detector

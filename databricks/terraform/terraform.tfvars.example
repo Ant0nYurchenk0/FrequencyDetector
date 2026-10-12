@@ -1,0 +1,11 @@
+# Copy to terraform.tfvars (gitignored) and fill in.
+catalog         = "your_catalog"
+kafka_bootstrap = "203.0.113.10:9094"
+kafka_password  = "same-value-as-kafka_password-in-terraform/terraform.tfvars"
+
+# true = no job runs on its own schedule; start them with "Run now" instead.
+schedules_paused = true
+
+# Fine-grained token: GitHub -> Settings -> Developer settings -> Fine-grained tokens,
+# repository FrequencyDetector only, permission Contents: Read and write.
+github_token = "github_pat_..."

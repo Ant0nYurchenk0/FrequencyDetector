@@ -1,0 +1,57 @@
+# A Deployment tells Kubernetes "keep N copies (pods) of this container running".
+# If a pod crashes or is deleted, Kubernetes starts a replacement; when the image changes,
+# it replaces pods one by one (rolling update) so the API never goes fully down.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: emitter-detector-api
+  namespace: frequency-detector
+  labels:
+    app: emitter-detector-api
+spec:
+  replicas: 3
+  # Which pods belong to this Deployment: those carrying the label below.
+  selector:
+    matchLabels:
+      app: emitter-detector-api
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 0  # never drop below 3 ready pods during an update
+      maxSurge: 1        # start at most 1 extra pod at a time
+  # The pod template: what each of the 3 copies looks like.
+  template:
+    metadata:
+      labels:
+        app: emitter-detector-api
+    spec:
+      containers:
+        - name: api
+          # Built locally with `docker build`; Docker Desktop's Kubernetes uses local images directly.
+          image: emitter-detector-api:v1
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8000
+          # Requests: what the scheduler reserves for the pod. Limits: the hard ceiling.
+          resources:
+            requests:
+              cpu: 100m      # 0.1 CPU core
+              memory: 128Mi
+            limits:
+              cpu: 500m
+              memory: 256Mi
+          # Readiness: only pods answering 200 here receive traffic from the Service.
+          readinessProbe:
+            httpGet:
+              path: /ready
+              port: 8000
+            initialDelaySeconds: 2
+            periodSeconds: 5
+          # Liveness: if this fails 3 times in a row, Kubernetes restarts the container.
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            initialDelaySeconds: 5
+            periodSeconds: 10
+            failureThreshold: 3

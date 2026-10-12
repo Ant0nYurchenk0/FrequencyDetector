@@ -1,0 +1,16 @@
+# A Service gives the pods one stable address and spreads requests across the ready ones.
+# Pods come and go (new names, new IPs); the Service stays the same.
+# type LoadBalancer: on Docker Desktop this is exposed at http://localhost:8000;
+# on a cloud cluster (GKE) it would get a public IP instead.
+apiVersion: v1
+kind: Service
+metadata:
+  name: emitter-detector-api
+  namespace: frequency-detector
+spec:
+  type: LoadBalancer
+  selector:
+    app: emitter-detector-api  # send traffic to pods with this label
+  ports:
+    - port: 8000        # the port the Service listens on
+      targetPort: 8000  # the port inside the container

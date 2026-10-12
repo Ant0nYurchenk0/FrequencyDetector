@@ -1,0 +1,4 @@
+# Copy to terraform.tfvars (gitignored) and fill in.
+project_id     = "your-gcp-project-id"
+my_ip_cidr     = "203.0.113.7/32"
+kafka_password = "choose-a-long-random-password"
